@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake Trading Game</title>
+
+<style>
+body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
+header{background:#020617;padding:10px;text-align:center}
+#balance{font-size:18px}
+#info{font-size:14px;color:#a5b4fc}
+
+#chart{
+ height:280px;background:#020617;
+ display:flex;align-items:flex-end;
+ gap:6px;padding:10px
+}
+.bar{flex:1;border-radius:4px;background:#22c55e}
+.bar.red{background:#ef4444}
+
+#shares{display:flex;gap:10px;padding:10px;flex-wrap:wrap}
+.share{
+ padding:10px 16px;border-radius:20px;
+ background:#1e293b;color:white;border:none
+}
+.share.active{background:#2563eb}
+
+#trade{
+ position:fixed;bottom:0;left:0;right:0;
+ background:#020617;display:flex;gap:10px;padding:10px
+}
+#trade input{width:70px;padding:10px;border-radius:8px;border:none}
+button{font-size:16px;border:none;border-radius:8px;padding:12px}
+.buy{background:#22c55e;color:black}
+.sell{background:#ef4444;color:white}
+.next{width:calc(100% - 20px);margin:10px;background:#2563eb;color:white}
+
+#gameover{
+ position:fixed;inset:0;background:rgba(0,0,0,.9);
+ display:none;align-items:center;justify-content:center;
+ flex-direction:column
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>Fake Trading Game</h2>
+<div id="balance">Balance: $5000</div>
+<div id="info">Select a share</div>
+</header>
+
+<div id="chart"></div>
+<div id="shares"></div>
+<button class="next" onclick="nextDay()">Next Day</button>
+
+<div id="trade">
+<input id="qty" type="number" min="1" value="1">
+<button class="buy" onclick="buy()">BUY</button>
+<button class="sell" onclick="sell()">SELL</button>
+</div>
+
+<div id="gameover">
+<h1 style="color:red">GAME OVER</h1>
+<p>You ignored risk management</p>
+<button onclick="location.reload()">Restart</button>
+</div>
+
+<script>
+let balance=5000, selected=null
+
+let stocks=[
+ {name:'Apple',price:180,quality:75,owned:0,history:[]},
+ {name:'Samsung',price:160,quality:65,owned:0,history:[]},
+ {name:'Vivo',price:90,quality:45,owned:0,history:[]},
+ {name:'Oppo',price:75,quality:30,owned:0,history:[]},
+
+ {name:'Tesla',price:220,quality:35,owned:0,history:[]},
+ {name:'Ferrari',price:300,quality:60,owned:0,history:[]},
+ {name:'Lamborghini',price:280,quality:40,owned:0,history:[]},
+ {name:'Rolls-Royce',price:350,quality:80,owned:0,history:[]}
+]
+
+function stars(q){
+ if(q>=75) return "★★★★☆ Low Risk"
+ if(q>=55) return "★★★☆☆ Medium Risk"
+ if(q>=40) return "★★☆☆☆ High Risk"
+ return "★☆☆☆☆ Very High Risk"
+}
+
+function init(){
+ let s=document.getElementById("shares")
+ stocks.forEach((st,i)=>{
+  let b=document.createElement("button")
+  b.className="share"
+  b.innerText=st.name
+  b.onclick=()=>selectStock(i)
+  s.appendChild(b)
+ })
+}
+
+function selectStock(i){
+ selected=stocks[i]
+ document.querySelectorAll(".share").forEach(b=>b.classList.remove("active"))
+ document.querySelectorAll(".share")[i].classList.add("active")
+ document.getElementById("info").innerText=
+  selected.name+" | $"+selected.price+" | "+stars(selected.quality)
+ drawChart()
+}
+
+function drawChart(){
+ let c=document.getElementById("chart")
+ c.innerHTML=""
+ if(!selected) return
+ selected.history.slice(-20).forEach(v=>{
+  let d=document.createElement("div")
+  d.className="bar"+(v<0?" red":"")
+  d.style.height=Math.abs(v)*2+20+"px"
+  c.appendChild(d)
+ })
+}
+
+function buy(){
+ if(!selected) return alert("Select share")
+ let q=parseInt(qty.value)
+ if(q<=0) return
+ let cost=selected.price*q
+ if(balance<cost) return alert("No money")
+ balance-=cost
+ selected.owned+=q
+ update()
+}
+
+function sell(){
+ if(!selected) return alert("Select share")
+ let q=parseInt(qty.value)
+ if(selected.owned<q) return alert("No shares")
+ balance+=selected.price*q
+ selected.owned-=q
+ update()
+}
+
+function nextDay(){
+ stocks.forEach(s=>{
+  let change=0
+  if(s.quality>=75) change=rand(-8,15)        // Apple, Rolls
+  else if(s.quality>=55) change=rand(-15,15) // Samsung, Ferrari
+  else if(s.quality>=40) change=rand(-25,20) // Vivo, Lambo
+  else change=Math.random()<0.6?rand(-40,-10):rand(10,30) // Tesla, Oppo
+
+  s.price+=change
+  s.history.push(change)
+
+  if(s.owned>0) balance+=change*s.owned
+ })
+ if(balance<=0) gameOver()
+ drawChart()
+ update()
+}
+
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function update(){balanceEl.innerText="Balance: $"+balance}
+function gameOver(){document.getElementById("gameover").style.display="flex"}
+
+const balanceEl=document.getElementById("balance")
+init()
+</script>
+
+</body>
+</html>
